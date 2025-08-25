@@ -25,6 +25,35 @@ export function useNotifications() {
     if (user) {
       fetchNotifications()
       subscribeToNotifications()
+    } else {
+      // ユーザーがいない場合はサンプル通知を表示
+      const sampleNotifications = [
+        {
+          id: '1',
+          user_id: 'demo-user',
+          type: 'approval',
+          title: '出張申請が承認されました',
+          message: '東京出張申請（BT-2024-001）が承認されました。',
+          data: {},
+          read: false,
+          read_at: null,
+          created_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          user_id: 'demo-user',
+          type: 'reminder',
+          title: '経費申請の提出期限が近づいています',
+          message: '7月分の経費申請の提出期限は明日です。',
+          data: {},
+          read: true,
+          read_at: new Date().toISOString(),
+          created_at: new Date(Date.now() - 86400000).toISOString()
+        }
+      ]
+      setNotifications(sampleNotifications)
+      setUnreadCount(1)
+      setLoading(false)
     }
   }, [user])
 

@@ -20,25 +20,36 @@ function StatsCards() {
     );
   }
 
+  // analyticsがnullの場合のフォールバック
+  const safeAnalytics = analytics || {
+    summary: {
+      monthlyTotal: 0,
+      monthlyCount: 0,
+      pendingCount: 0,
+      approvedCount: 0,
+      averageAmount: 0
+    }
+  };
+
   const statsData = [
     {
       title: '今月の申請金額',
-      value: `¥${analytics?.summary?.monthlyTotal?.toLocaleString() || '0'}`,
+      value: `¥${safeAnalytics.summary.monthlyTotal?.toLocaleString() || '0'}`,
       trend: '+10.5%',
       trendUp: true,
       chartColor: 'from-gray-500 to-gray-700'
     },
     {
       title: '今月の申請件数',
-      value: `${analytics?.summary?.monthlyCount || 0}件`,
-      trend: `平均¥${analytics?.summary?.averageAmount?.toLocaleString() || '0'}`,
+      value: `${safeAnalytics.summary.monthlyCount || 0}件`,
+      trend: `平均¥${safeAnalytics.summary.averageAmount?.toLocaleString() || '0'}`,
       trendUp: true,
       chartColor: 'from-gray-400 to-gray-600'
     },
     {
       title: '承認待ち',
-      value: `${analytics?.summary?.pendingCount || 0}件`,
-      trend: `承認済み${analytics?.summary?.approvedCount || 0}件`,
+      value: `${safeAnalytics.summary.pendingCount || 0}件`,
+      trend: `承認済み${safeAnalytics.summary.approvedCount || 0}件`,
       trendUp: true,
       chartColor: 'from-gray-600 to-gray-800'
     }

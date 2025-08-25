@@ -48,33 +48,47 @@ export function useAuth() {
           }
         }
 
-        // 通常の認証チェック
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          if (mounted) {
-            setAuthState({
-              user: null,
-              profile: null,
-              loading: false,
-              error: error.message
-            });
-          }
-          return;
-        }
-
-        if (session?.user) {
-          const profile = await getCurrentUserProfile();
+        // 通常の認証チェック（エラーハンドリング強化）
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
           
-          if (mounted) {
-            setAuthState({
-              user: session.user,
-              profile,
-              loading: false,
-              error: null
-            });
+          if (error) {
+            console.warn('Supabase auth error:', error);
+            // Supabase接続エラーの場合はデモモードにフォールバック
+            if (mounted) {
+              setAuthState({
+                user: null,
+                profile: null,
+                loading: false,
+                error: null
+              });
+            }
+            return;
           }
-        } else {
+
+          if (session?.user) {
+            const profile = await getCurrentUserProfile();
+            
+            if (mounted) {
+              setAuthState({
+                user: session.user,
+                profile,
+                loading: false,
+                error: null
+              });
+            }
+          } else {
+            if (mounted) {
+              setAuthState({
+                user: null,
+                profile: null,
+                loading: false,
+                error: null
+              });
+            }
+          }
+        } catch (supabaseError) {
+          console.warn('Supabase connection failed, using offline mode:', supabaseError);
           if (mounted) {
             setAuthState({
               user: null,
@@ -91,7 +105,7 @@ export function useAuth() {
             user: null,
             profile: null,
             loading: false,
-            error: 'Authentication initialization failed'
+            error: null
           });
         }
       }

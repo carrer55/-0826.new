@@ -14,8 +14,13 @@ interface MainContentProps {
 function MainContent({ onNavigate, onShowDetail, onCreateApplication, onShowNotifications }: MainContentProps) {
   // ユーザーの役割を取得（実際の実装では、ユーザー情報から取得）
   const getUserRole = () => {
-    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-    return userProfile.role || 'user'; // デフォルトは一般ユーザー
+    try {
+      const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+      return userProfile.role || 'user'; // デフォルトは一般ユーザー
+    } catch (error) {
+      console.warn('Failed to parse user profile:', error);
+      return 'user';
+    }
   };
 
   const userRole = getUserRole();

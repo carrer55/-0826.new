@@ -3,11 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
+// デモモード用のフォールバック設定
+const defaultUrl = 'https://demo.supabase.co'
+const defaultKey = 'demo-anon-key'
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const finalUrl = supabaseUrl || defaultUrl
+const finalKey = supabaseAnonKey || defaultKey
+
+export const supabase = createClient(finalUrl, finalKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -766,18 +769,53 @@ export const getCurrentUserProfile = async () => {
       return JSON.parse(demoProfile);
     }
   }
-  const { data: profile, error } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+  
+  try {
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-  if (error) {
-    console.error('Profile fetch error:', error);
-    return null;
+    if (error) {
+      console.warn('Profile fetch error:', error);
+      // エラーの場合はデフォルトプロフィールを返す
+      return {
+        id: user.id,
+        email: user.email || '',
+        full_name: 'ユーザー',
+        company_name: '',
+        position: 'user',
+        phone: '',
+        department: '',
+        role: 'user',
+        default_organization_id: null,
+        avatar_url: null,
+        onboarding_completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    return profile;
+  } catch (error) {
+    console.warn('Supabase connection error, using fallback profile:', error);
+    return {
+      id: user.id,
+      email: user.email || '',
+      full_name: 'ユーザー',
+      company_name: '',
+      position: 'user',
+      phone: '',
+      department: '',
+      role: 'user',
+      default_organization_id: null,
+      avatar_url: null,
+      onboarding_completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   }
-
-  return profile;
 };
 
 export const updateUserProfile = async (updates: Partial<UserProfile>) => {

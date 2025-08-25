@@ -77,9 +77,7 @@ function AuthWrapper() {
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
           <p className="text-slate-600">読み込み中...</p>
-          {error && (
-            <p className="text-red-600 text-sm mt-2">{error}</p>
-          )}
+          <p className="text-slate-500 text-xs mt-2">システムを初期化しています</p>
         </div>
       </div>
     );

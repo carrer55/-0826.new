@@ -60,6 +60,45 @@ export function useApplications() {
   useEffect(() => {
     if (user && profile) {
       fetchApplications()
+    } else {
+      // ユーザーまたはプロフィールがない場合はサンプルデータを使用
+      setApplications([
+        {
+          id: 'BT-2024-001',
+          user_id: 'demo-user',
+          organization_id: null,
+          type: 'business_trip',
+          title: '東京出張申請',
+          description: 'クライアント訪問',
+          data: {},
+          total_amount: 52500,
+          status: 'approved',
+          submitted_at: '2024-07-20T09:00:00Z',
+          approved_at: '2024-07-21T16:00:00Z',
+          approved_by: null,
+          rejection_reason: null,
+          created_at: '2024-07-20T09:00:00Z',
+          updated_at: '2024-07-21T16:00:00Z'
+        },
+        {
+          id: 'EX-2024-001',
+          user_id: 'demo-user',
+          organization_id: null,
+          type: 'expense',
+          title: '交通費精算',
+          description: '会議参加',
+          data: {},
+          total_amount: 12800,
+          status: 'pending',
+          submitted_at: '2024-07-18T11:00:00Z',
+          approved_at: null,
+          approved_by: null,
+          rejection_reason: null,
+          created_at: '2024-07-18T11:00:00Z',
+          updated_at: '2024-07-18T11:00:00Z'
+        }
+      ])
+      setLoading(false)
     }
   }, [user, profile])
 

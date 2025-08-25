@@ -91,6 +91,17 @@ function Dashboard() {
           <div className="hidden lg:block">
             <Sidebar isOpen={true} onClose={() => {}} onNavigate={navigateToView} currentView={currentView} />
           </div>
+          {isSidebarOpen && (
+            <>
+              <div 
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={toggleSidebar}
+              />
+              <div className="fixed left-0 top-0 h-full z-50 lg:hidden">
+                <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} onNavigate={navigateToView} currentView={currentView} />
+              </div>
+            </>
+          )}
           <div className="flex-1 flex flex-col min-w-0">
             <TopBar onMenuClick={toggleSidebar} onNavigate={navigateToView} />
             <div className="flex-1 overflow-auto p-4 lg:p-6 relative z-10">
@@ -112,6 +123,17 @@ function Dashboard() {
           <div className="hidden lg:block">
             <Sidebar isOpen={true} onClose={() => {}} onNavigate={navigateToView} currentView={currentView} />
           </div>
+          {isSidebarOpen && (
+            <>
+              <div 
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={toggleSidebar}
+              />
+              <div className="fixed left-0 top-0 h-full z-50 lg:hidden">
+                <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} onNavigate={navigateToView} currentView={currentView} />
+              </div>
+            </>
+          )}
           <div className="flex-1 flex flex-col min-w-0">
             <TopBar onMenuClick={toggleSidebar} onNavigate={navigateToView} />
             <div className="flex-1 overflow-auto p-4 lg:p-6 relative z-10">
