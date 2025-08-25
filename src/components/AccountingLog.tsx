@@ -29,51 +29,6 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
-  const [logs] = useState<LogEntry[]>([
-    {
-      id: 'LOG-001',
-      applicationId: 'BT-2024-001',
-      service: 'freee',
-      type: 'business-trip',
-      amount: 52500,
-      status: 'success',
-      sentAt: '2024-07-20T16:30:00Z',
-      retryCount: 0
-    },
-    {
-      id: 'LOG-002',
-      applicationId: 'EX-2024-001',
-      service: 'MoneyForward',
-      type: 'expense',
-      amount: 12800,
-      status: 'failed',
-      sentAt: '2024-07-20T14:15:00Z',
-      errorMessage: 'API認証エラー: トークンの有効期限が切れています',
-      retryCount: 2,
-      lastRetry: '2024-07-20T15:45:00Z'
-    },
-    {
-      id: 'LOG-003',
-      applicationId: 'BT-2024-002',
-      service: '弥生会計',
-      type: 'business-trip',
-      amount: 35000,
-      status: 'pending',
-      sentAt: '2024-07-20T13:00:00Z',
-      retryCount: 1,
-      lastRetry: '2024-07-20T13:30:00Z'
-    },
-    {
-      id: 'LOG-004',
-      applicationId: 'EX-2024-002',
-      service: 'freee',
-      type: 'expense',
-      amount: 8500,
-      status: 'success',
-      sentAt: '2024-07-19T11:20:00Z',
-      retryCount: 0
-    }
-  ]);
   const services = ['freee', 'moneyforward', 'yayoi'];
 
   const toggleSidebar = () => {
