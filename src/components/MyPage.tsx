@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Settings, CreditCard, Bell, Users, HelpCircle, Edit, Save, Eye, EyeOff, Link } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useOrganizations } from '../hooks/useOrganizations';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
@@ -37,19 +38,23 @@ function MyPage({ onNavigate }: MyPageProps) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const { updateProfile, profile } = useAuth();
+  const { currentOrganization, members, inviteUser } = useOrganizations();
   
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: '山田太郎',
-    position: '代表取締役',
-    email: 'yamada@example.com',
-    phone: '090-1234-5678',
-    company: '株式会社サンプル',
-    department: '経営企画部',
-    allowances: {
-      domestic: 5000,
-      overseas: 10000,
-      transportation: 2000,
-      accommodation: 10000
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    return {
+      name: profile?.full_name || '',
+      position: profile?.position || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
+      company: profile?.company_name || '',
+      department: profile?.department || '',
+      allowances: {
+        domestic: currentOrganization?.settings?.allowances?.domestic?.[profile?.role || 'general'] || 5000,
+        overseas: currentOrganization?.settings?.allowances?.overseas?.[profile?.role || 'general'] || 10000,
+        transportation: 2000,
+        accommodation: 10000
+      }
     }
   });
 
@@ -71,9 +76,19 @@ function MyPage({ onNavigate }: MyPageProps) {
   };
 
   const handleProfileSave = () => {
-    // プロフィール情報をローカルストレージに保存
-    localStorage.setItem('userProfile', JSON.stringify(userProfile));
-    alert('プロフィールが更新されました');
+    updateProfile({
+      full_name: userProfile.name,
+      position: userProfile.position,
+      phone: userProfile.phone,
+      company_name: userProfile.company,
+      department: userProfile.department
+    }).then(result => {
+      if (result.success) {
+        alert('プロフィールが更新されました');
+      } else {
+        alert('更新に失敗しました: ' + result.error);
+      }
+    });
   };
 
   const handlePasswordChange = () => {
@@ -422,7 +437,22 @@ function MyPage({ onNavigate }: MyPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800">ユーザー管理</h3>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-navy-600 to-navy-800 text-white rounded-lg font-medium hover:from-navy-700 hover:to-navy-900 transition-all duration-200">
+        <button 
+          onClick={() => {
+            const email = prompt('招待するユーザーのメールアドレスを入力してください:');
+            const role = prompt('役割を選択してください (admin/manager/member):') as 'admin' | 'manager' | 'member';
+            if (email && role) {
+              inviteUser(email, role).then(result => {
+                if (result.success) {
+                  alert('招待メールを送信しました');
+                } else {
+                  alert('招待に失敗しました: ' + result.error);
+                }
+              });
+            }
+          }}
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-navy-600 to-navy-800 text-white rounded-lg font-medium hover:from-navy-700 hover:to-navy-900 transition-all duration-200"
+        >
           <Users className="w-4 h-4" />
           <span>ユーザー招待</span>
         </button>
@@ -440,45 +470,30 @@ function MyPage({ onNavigate }: MyPageProps) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-white/20">
-              <td className="py-3 px-4 text-slate-800">山田太郎</td>
-              <td className="py-3 px-4 text-slate-700">yamada@example.com</td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-red-700 bg-red-100">管理者</span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-100">アクティブ</span>
-              </td>
-              <td className="py-3 px-4 text-center">
-                <button className="text-slate-600 hover:text-slate-800">編集</button>
-              </td>
-            </tr>
-            <tr className="border-b border-white/20">
-              <td className="py-3 px-4 text-slate-800">佐藤花子</td>
-              <td className="py-3 px-4 text-slate-700">sato@example.com</td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-blue-700 bg-blue-100">承認者</span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-100">アクティブ</span>
-              </td>
-              <td className="py-3 px-4 text-center">
-                <button className="text-slate-600 hover:text-slate-800">編集</button>
-              </td>
-            </tr>
-            <tr className="border-b border-white/20">
-              <td className="py-3 px-4 text-slate-800">田中次郎</td>
-              <td className="py-3 px-4 text-slate-700">tanaka@example.com</td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-slate-700 bg-slate-100">一般</span>
-              </td>
-              <td className="py-3 px-4">
-                <span className="px-2 py-1 rounded-full text-xs font-medium text-amber-700 bg-amber-100">招待中</span>
-              </td>
-              <td className="py-3 px-4 text-center">
-                <button className="text-slate-600 hover:text-slate-800">編集</button>
-              </td>
-            </tr>
+            {members.map((member) => (
+              <tr key={member.id} className="border-b border-white/20">
+                <td className="py-3 px-4 text-slate-800">{member.user_profiles?.full_name || '不明'}</td>
+                <td className="py-3 px-4 text-slate-700">{member.user_profiles?.email || '不明'}</td>
+                <td className="py-3 px-4">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    member.role === 'owner' ? 'text-red-700 bg-red-100' :
+                    member.role === 'admin' ? 'text-blue-700 bg-blue-100' :
+                    member.role === 'manager' ? 'text-amber-700 bg-amber-100' :
+                    'text-slate-700 bg-slate-100'
+                  }`}>
+                    {member.role === 'owner' ? 'オーナー' :
+                     member.role === 'admin' ? '管理者' :
+                     member.role === 'manager' ? 'マネージャー' : '一般'}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="px-2 py-1 rounded-full text-xs font-medium text-emerald-700 bg-emerald-100">アクティブ</span>
+                </td>
+                <td className="py-3 px-4 text-center">
+                  <button className="text-slate-600 hover:text-slate-800">編集</button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

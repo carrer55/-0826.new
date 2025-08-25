@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, FileText, Calendar, MapPin, BarChart3, TrendingUp, Plus, Eye, Edit } from 'lucide-react';
+import { useDocuments } from '../hooks/useDocuments';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import AdvancedSearch from './AdvancedSearch';
@@ -22,7 +23,7 @@ interface Document {
 
 function DocumentManagement({ onNavigate }: DocumentManagementProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const { documents, loading, error, generateDocumentFile } = useDocuments();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -104,14 +105,6 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
         status: 'draft',
         createdAt: '2024-08-01T11:00:00Z',
         updatedAt: '2024-08-01T11:00:00Z',
-        size: '8.9MB',
-        thumbnail: '📈',
-        description: '2024年度の年次集計レポート'
-      }
-    ];
-    setDocuments(sampleDocuments);
-  }, []);
-
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -166,7 +159,15 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
   };
 
   const handleDownloadDocument = (documentId: string) => {
-    alert(`ダウンロード中: ${documents.find(d => d.id === documentId)?.title}`);
+    const document = documents.find(d => d.id === documentId);
+    if (document?.file_url) {
+      const link = document.createElement('a');
+      link.href = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${document.file_url}`;
+      link.download = document.title;
+      link.click();
+    } else {
+      alert('ダウンロード用ファイルが見つかりません');
+    }
   };
 
   return (
@@ -279,6 +280,16 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
 
               {/* 書類一覧 */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {loading ? (
+                  <div className="col-span-full flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy-600"></div>
+                    <span className="ml-3 text-slate-600">読み込み中...</span>
+                  </div>
+                ) : error ? (
+                  <div className="col-span-full bg-red-50/50 border border-red-200/50 rounded-lg p-4">
+                    <p className="text-red-700">エラー: {error}</p>
+                  </div>
+                ) : (
                 {filteredDocuments.map((document) => (
                   <div key={document.id} className="backdrop-blur-xl bg-white/10 rounded-lg border border-white/20 shadow-lg hover:shadow-xl hover:bg-white/15 transition-all duration-300 overflow-hidden">
                     {/* サムネイル */}
@@ -300,11 +311,11 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
                       <div className="space-y-1 text-xs text-slate-500 mb-3">
                         <div className="flex justify-between">
                           <span>作成日:</span>
-                          <span className="text-slate-600">{new Date(document.createdAt).toLocaleDateString('ja-JP')}</span>
+                          <span className="text-slate-600">{new Date(document.created_at).toLocaleDateString('ja-JP')}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>サイズ:</span>
-                          <span className="text-slate-600">{document.size}</span>
+                          <span className="text-slate-600">{document.file_size ? `${(document.file_size / 1024 / 1024).toFixed(1)}MB` : '―'}</span>
                         </div>
                       </div>
                       
@@ -335,6 +346,7 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
                     </div>
                   </div>
                 ))}
+                )}
               </div>
 
               {filteredDocuments.length === 0 && (

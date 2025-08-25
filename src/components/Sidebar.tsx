@@ -124,10 +124,12 @@ function Sidebar({ isOpen, onClose, onNavigate, currentView = 'dashboard' }: Sid
             </div>
             <div>
               <p className="text-slate-800 text-sm font-medium" id="sidebar-user-name">
-                山田太郎
+                {JSON.parse(localStorage.getItem('userProfile') || '{}').full_name || 
+                 JSON.parse(localStorage.getItem('userProfile') || '{}').name || 
+                 'ユーザー'}
               </p>
               <p className="text-slate-600 text-xs" id="sidebar-user-position">
-                代表取締役
+                {JSON.parse(localStorage.getItem('userProfile') || '{}').position || '役職未設定'}
               </p>
             </div>
           </div>

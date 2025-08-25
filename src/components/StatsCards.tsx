@@ -1,31 +1,48 @@
 import React from 'react';
 import { Info, TrendingUp, TrendingDown } from 'lucide-react';
+import { useAnalytics } from '../hooks/useAnalytics';
 
-const statsData = [
-  {
-    title: '今月の出張日当',
-    value: '¥150,000',
-    trend: '+10.5%',
-    trendUp: true,
-    chartColor: 'from-gray-500 to-gray-700'
-  },
-  {
-    title: '今月の交通費・宿泊費',
-    value: '¥82,500',
-    trend: '-5.2%',
-    trendUp: false,
-    chartColor: 'from-gray-400 to-gray-600'
-  },
-  {
-    title: '今月の精算合計',
-    value: '5件',
-    trend: '前月比+2件',
-    trendUp: true,
-    chartColor: 'from-gray-600 to-gray-800'
-  }
-];
 
 function StatsCards() {
+  const { analytics, loading } = useAnalytics();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+        {[1, 2, 3].map((index) => (
+          <div key={index} className="backdrop-blur-xl bg-white/20 rounded-xl p-4 lg:p-6 border border-white/30 shadow-xl animate-pulse">
+            <div className="h-4 bg-slate-300 rounded mb-4"></div>
+            <div className="h-8 bg-slate-300 rounded mb-2"></div>
+            <div className="h-4 bg-slate-300 rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const statsData = [
+    {
+      title: '今月の申請金額',
+      value: `¥${analytics?.summary?.monthlyTotal?.toLocaleString() || '0'}`,
+      trend: '+10.5%',
+      trendUp: true,
+      chartColor: 'from-gray-500 to-gray-700'
+    },
+    {
+      title: '今月の申請件数',
+      value: `${analytics?.summary?.monthlyCount || 0}件`,
+      trend: `平均¥${analytics?.summary?.averageAmount?.toLocaleString() || '0'}`,
+      trendUp: true,
+      chartColor: 'from-gray-400 to-gray-600'
+    },
+    {
+      title: '承認待ち',
+      value: `${analytics?.summary?.pendingCount || 0}件`,
+      trend: `承認済み${analytics?.summary?.approvedCount || 0}件`,
+      trendUp: true,
+      chartColor: 'from-gray-600 to-gray-800'
+    }
+  ];
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
       {statsData.map((stat, index) => (

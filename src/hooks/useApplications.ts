@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { supabase, approveApplication, syncToAccounting, generateDocument } from '../lib/supabase'
+import { supabase, approveApplication, syncToAccounting, generateDocument, processReceiptOCR } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { useExpenseCategories } from './useExpenseCategories'
+import { useTravelDestinations } from './useTravelDestinations'
 
 export interface Application {
   id: string
@@ -52,6 +54,8 @@ export function useApplications() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user, profile } = useAuth()
+  const { categories } = useExpenseCategories()
+  const { destinations } = useTravelDestinations()
 
   useEffect(() => {
     if (user && profile) {
@@ -68,10 +72,16 @@ export function useApplications() {
         .from('applications')
         .select(`
           *,
-          user_profiles!applications_user_id_fkey(full_name, department, position),
+          user_profiles!applications_user_id_fkey(full_name, department, position, company_name),
           organizations(name),
-          expense_items(*),
-          business_trip_details(*)
+          expense_items(
+            *,
+            expense_categories(name, description)
+          ),
+          business_trip_details(
+            *,
+            travel_destinations(name, address, country, is_domestic)
+          )
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
@@ -92,7 +102,8 @@ export function useApplications() {
   const createApplication = async (
     type: 'business_trip' | 'expense',
     title: string,
-    data: any
+    data: any,
+    isDraft: boolean = true
   ) => {
     try {
       if (!user || !profile?.default_organization_id) {
@@ -108,7 +119,9 @@ export function useApplications() {
           title,
           description: data.description || null,
           data,
-          status: 'draft'
+          total_amount: calculateTotalAmount(type, data),
+          status: isDraft ? 'draft' : 'pending',
+          submitted_at: isDraft ? null : new Date().toISOString()
         })
         .select()
         .single()
@@ -123,6 +136,7 @@ export function useApplications() {
           .from('business_trip_details')
           .insert({
             application_id: newApp.id,
+            destination_id: data.tripDetails.destinationId || null,
             start_date: data.tripDetails.startDate,
             end_date: data.tripDetails.endDate,
             purpose: data.tripDetails.purpose,
@@ -141,10 +155,10 @@ export function useApplications() {
       if (type === 'expense' && data.expenseItems) {
         const expenseItems = data.expenseItems.map((item: any) => ({
           application_id: newApp.id,
+          category_id: item.categoryId || null,
           date: item.date,
           amount: item.amount,
-          description: item.description,
-          category_id: item.categoryId || null
+          description: item.description
         }))
 
         const { error: expenseError } = await supabase
@@ -240,6 +254,67 @@ export function useApplications() {
     }
   }
 
+  const uploadReceipt = async (
+    applicationId: string,
+    expenseItemId: string,
+    file: File
+  ) => {
+    try {
+      // ファイルをBase64に変換
+      const base64 = await fileToBase64(file)
+      
+      // OCR処理を実行
+      const result = await processReceiptOCR(base64, applicationId, expenseItemId)
+      
+      await fetchApplications()
+      return { success: true, result }
+    } catch (err) {
+      console.error('Receipt upload error:', err)
+      return { 
+        success: false, 
+        error: err instanceof Error ? err.message : 'Failed to upload receipt' 
+      }
+    }
+  }
+
+  const getApplicationDetail = async (applicationId: string) => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('applications')
+        .select(`
+          *,
+          user_profiles!applications_user_id_fkey(full_name, department, position, company_name),
+          organizations(name),
+          expense_items(
+            *,
+            expense_categories(name, description)
+          ),
+          business_trip_details(
+            *,
+            travel_destinations(name, address, country, is_domestic)
+          ),
+          application_approvals(
+            *,
+            user_profiles!application_approvals_approver_id_fkey(full_name, position)
+          )
+        `)
+        .eq('id', applicationId)
+        .single()
+
+      if (fetchError) {
+        throw fetchError
+      }
+
+      return { success: true, application: data }
+    } catch (err) {
+      console.error('Application detail fetch error:', err)
+      return { 
+        success: false, 
+        error: err instanceof Error ? err.message : 'Failed to fetch application detail' 
+      }
+    }
+  }
+
   const handleApproval = async (
     applicationId: string,
     action: 'approved' | 'rejected' | 'returned',
@@ -278,6 +353,35 @@ export function useApplications() {
     submitApplication,
     deleteApplication,
     handleApproval,
+    uploadReceipt,
+    getApplicationDetail,
     refreshApplications: fetchApplications
   }
+}
+
+function calculateTotalAmount(type: 'business_trip' | 'expense', data: any): number {
+  if (type === 'business_trip' && data.tripDetails) {
+    const { estimatedDailyAllowance, estimatedTransportation, estimatedAccommodation } = data.tripDetails
+    return (estimatedDailyAllowance || 0) + (estimatedTransportation || 0) + (estimatedAccommodation || 0)
+  }
+  
+  if (type === 'expense' && data.expenseItems) {
+    return data.expenseItems.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)
+  }
+  
+  return 0
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      const result = reader.result as string
+      // Remove data:image/jpeg;base64, prefix
+      const base64 = result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = error => reject(error)
+  })
 }

@@ -13,8 +13,18 @@ function TopBar({ onMenuClick, onNavigate, onShowNotifications }: TopBarProps) {
   
   // ユーザーのプラン情報を取得（実際の実装では、ユーザー情報から取得）
   const getCurrentPlan = () => {
+    // 実際の実装では、組織の設定から取得
     const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
-    return userProfile.currentPlan || 'Pro'; // デフォルトはPro
+    const role = userProfile.role;
+    
+    // 役割に基づいてプランを決定
+    if (role === 'admin' || role === '管理者') {
+      return 'Pro';
+    } else if (role === 'manager' || role === 'マネージャー') {
+      return 'Pro';
+    } else {
+      return 'Free';
+    }
   };
 
   const currentPlan = getCurrentPlan();

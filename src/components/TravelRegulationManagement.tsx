@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, History, Upload, Download, FileText } from 'lucide-react';
+import { useTravelRegulations } from '../hooks/useTravelRegulations';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
@@ -28,30 +29,23 @@ interface Regulation {
 
 function TravelRegulationManagement({ onNavigate }: TravelRegulationManagementProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [regulations, setRegulations] = useState<Regulation[]>([]);
+  const { regulations, loading, error, activateRegulation } = useTravelRegulations();
   const [searchTerm, setSearchTerm] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
-
-  useEffect(() => {
-    // ローカルストレージから規程データを読み込み
-    const savedRegulations = JSON.parse(localStorage.getItem('travelRegulations') || '[]');
-    setRegulations(savedRegulations);
-  }, []);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   const filteredRegulations = regulations.filter(regulation =>
-    (regulation.companyName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (regulation.company_info?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (regulation.version || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDelete = (id: string) => {
     if (confirm('この規程を削除してもよろしいですか？')) {
-      const updatedRegulations = regulations.filter(reg => reg.id !== id);
-      setRegulations(updatedRegulations);
-      localStorage.setItem('travelRegulations', JSON.stringify(updatedRegulations));
+      // 実際の削除処理は useTravelRegulations フックで実装
+      alert('削除機能は準備中です');
     }
   };
 
@@ -64,23 +58,8 @@ function TravelRegulationManagement({ onNavigate }: TravelRegulationManagementPr
   const handleUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'application/pdf') {
-      // PDFアップロード処理（実際の実装では、サーバーサイドでPDF解析を行う）
-      const newRegulation: Regulation = {
-        id: Date.now().toString(),
-        companyName: `アップロード規程_${file.name}`,
-        version: 'v1.0',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'draft',
-        domesticAllowance: { executive: 0, manager: 0, general: 0 },
-        overseasAllowance: { executive: 0, manager: 0, general: 0 }
-      };
-      
-      const updatedRegulations = [...regulations, newRegulation];
-      setRegulations(updatedRegulations);
-      localStorage.setItem('travelRegulations', JSON.stringify(updatedRegulations));
       setShowUploadModal(false);
-      alert('PDFファイルがアップロードされました。');
+      alert('PDFアップロード機能は準備中です。');
     } else {
       alert('PDFファイルを選択してください。');
     }
@@ -198,7 +177,7 @@ function TravelRegulationManagement({ onNavigate }: TravelRegulationManagementPr
                       ) : (
                         filteredRegulations.map((regulation) => (
                           <tr key={regulation.id} className="border-b border-white/20 hover:bg-white/20 transition-colors">
-                            <td className="py-4 px-6 text-slate-800 font-medium">{regulation.companyName}</td>
+                            <td className="py-4 px-6 text-slate-800 font-medium">{regulation.company_info?.name || regulation.name}</td>
                             <td className="py-4 px-6 text-slate-700">{regulation.version}</td>
                             <td className="py-4 px-6">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(regulation.status)}`}>
@@ -206,15 +185,15 @@ function TravelRegulationManagement({ onNavigate }: TravelRegulationManagementPr
                               </span>
                             </td>
                             <td className="py-4 px-6 text-slate-600 text-sm">
-                              {new Date(regulation.createdAt).toLocaleDateString('ja-JP')}
+                              {new Date(regulation.created_at).toLocaleDateString('ja-JP')}
                             </td>
                             <td className="py-4 px-6 text-slate-600 text-sm">
-                              {new Date(regulation.updatedAt).toLocaleDateString('ja-JP')}
+                              {new Date(regulation.updated_at).toLocaleDateString('ja-JP')}
                             </td>
                             <td className="py-4 px-6 text-slate-600 text-sm">
                               <div className="space-y-1">
-                                <div>国内: ¥{(regulation.domesticAllowance?.general || 0).toLocaleString()}</div>
-                                <div>海外: ¥{(regulation.overseasAllowance?.general || 0).toLocaleString()}</div>
+                                <div>国内: ¥{(regulation.allowance_settings?.positions?.find(p => p.name.includes('一般'))?.dailyAllowance || 0).toLocaleString()}</div>
+                                <div>海外: ¥{((regulation.allowance_settings?.positions?.find(p => p.name.includes('一般'))?.dailyAllowance || 0) * 1.5).toLocaleString()}</div>
                               </div>
                             </td>
                             <td className="py-4 px-6">

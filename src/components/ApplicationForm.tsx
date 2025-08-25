@@ -4,6 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, Upload, Calendar, MapPin, Calculator, FileText, Plus, Trash2 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
+import { useExpenseCategories } from '../hooks/useExpenseCategories';
+import { useTravelDestinations } from '../hooks/useTravelDestinations';
 
 interface ApplicationFormProps {
   type: 'business_trip' | 'expense';
@@ -42,8 +44,10 @@ type ExpenseFormData = z.infer<typeof expenseSchema>;
 
 function ApplicationForm({ type, onSuccess, onCancel }: ApplicationFormProps) {
   const { createApplication, loading } = useApplications();
+  const { categories } = useExpenseCategories();
+  const { destinations } = useTravelDestinations();
   const [expenseItems, setExpenseItems] = useState([
-    { id: '1', category: '交通費', date: '', amount: 0, description: '', receipt: null }
+    { id: '1', categoryId: '', category: '交通費', date: '', amount: 0, description: '', receipt: null }
   ]);
 
   const businessTripForm = useForm<BusinessTripFormData>({
@@ -123,7 +127,8 @@ function ApplicationForm({ type, onSuccess, onCancel }: ApplicationFormProps) {
   const addExpenseItem = () => {
     const newItem = {
       id: Date.now().toString(),
-      category: '交通費',
+      categoryId: categories[0]?.id || '',
+      category: categories[0]?.name || '交通費',
       date: '',
       amount: 0,
       description: '',
@@ -374,15 +379,18 @@ function ApplicationForm({ type, onSuccess, onCancel }: ApplicationFormProps) {
                     </label>
                     <select
                       value={item.category}
-                      onChange={(e) => updateExpenseItem(item.id, 'category', e.target.value)}
+                      onChange={(e) => {
+                        const selectedCategory = categories.find(cat => cat.name === e.target.value);
+                        updateExpenseItem(item.id, 'category', e.target.value);
+                        updateExpenseItem(item.id, 'categoryId', selectedCategory?.id || '');
+                      }}
                       className="w-full px-3 py-2 bg-white/50 border border-white/40 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-navy-400 backdrop-blur-xl"
                     >
-                      <option value="交通費">交通費</option>
-                      <option value="宿泊費">宿泊費</option>
-                      <option value="日当">日当</option>
-                      <option value="会議費">会議費</option>
-                      <option value="通信費">通信費</option>
-                      <option value="雑費">雑費</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.name}>
+                          {category.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>

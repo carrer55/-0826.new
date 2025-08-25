@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Search, Filter, RefreshCw, CheckCircle, XCircle, AlertTriangle, Download, Eye } from 'lucide-react';
+import { useAccountingIntegration } from '../hooks/useAccountingIntegration';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
@@ -22,6 +23,7 @@ interface LogEntry {
 
 function AccountingLog({ onNavigate }: AccountingLogProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { logs, loading, error, retryFailedSync } = useAccountingIntegration();
   const [searchTerm, setSearchTerm] = useState('');
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -71,21 +73,7 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
       sentAt: '2024-07-19T11:20:00Z',
       retryCount: 0
     },
-    {
-      id: 'LOG-005',
-      applicationId: 'BT-2024-003',
-      service: 'MoneyForward',
-      type: 'business-trip',
-      amount: 45000,
-      status: 'failed',
-      sentAt: '2024-07-18T09:45:00Z',
-      errorMessage: 'データ形式エラー: 必須フィールドが不足しています',
-      retryCount: 3,
-      lastRetry: '2024-07-18T16:20:00Z'
-    }
-  ]);
-
-  const services = ['freee', 'MoneyForward', '弥生会計'];
+  const services = ['freee', 'moneyforward', 'yayoi'];
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -127,14 +115,14 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
   };
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.applicationId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = log.application_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesService = serviceFilter === 'all' || log.service === serviceFilter;
+    const matchesService = serviceFilter === 'all' || log.service_name === serviceFilter;
     const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
     
     let matchesDate = true;
     if (dateRange.start && dateRange.end) {
-      const logDate = new Date(log.sentAt);
+      const logDate = new Date(log.created_at);
       const startDate = new Date(dateRange.start);
       const endDate = new Date(dateRange.end);
       matchesDate = logDate >= startDate && logDate <= endDate;
@@ -145,7 +133,13 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
 
   const handleRetry = (logId: string) => {
     if (confirm('この送信を再試行しますか？')) {
-      alert('再送信を開始しました');
+      retryFailedSync(logId).then(result => {
+        if (result.success) {
+          alert('再送信を開始しました');
+        } else {
+          alert('再送信に失敗しました: ' + result.error);
+        }
+      });
     }
   };
 
@@ -326,10 +320,12 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
                         filteredLogs.map((log) => (
                           <tr key={log.id} className="border-b border-white/20 hover:bg-white/20 transition-colors">
                             <td className="py-4 px-6 text-slate-800 font-medium">{log.id}</td>
-                            <td className="py-4 px-6 text-slate-800">{log.applicationId}</td>
-                            <td className="py-4 px-6 text-slate-700">{log.service}</td>
-                            <td className="py-4 px-6 text-slate-700">{getTypeLabel(log.type)}</td>
-                            <td className="py-4 px-6 text-slate-800 font-medium">¥{log.amount.toLocaleString()}</td>
+                            <td className="py-4 px-6 text-slate-800">{log.application_id}</td>
+                            <td className="py-4 px-6 text-slate-700">{log.service_name}</td>
+                            <td className="py-4 px-6 text-slate-700">{log.operation_type}</td>
+                            <td className="py-4 px-6 text-slate-800 font-medium">
+                              {log.request_data?.amount ? `¥${log.request_data.amount.toLocaleString()}` : '―'}
+                            </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center space-x-2">
                                 {getStatusIcon(log.status)}
@@ -339,10 +335,10 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
                               </div>
                             </td>
                             <td className="py-4 px-6 text-slate-600 text-sm">
-                              {new Date(log.sentAt).toLocaleString('ja-JP')}
+                              {new Date(log.created_at).toLocaleString('ja-JP')}
                             </td>
                             <td className="py-4 px-6 text-slate-600 text-sm">
-                              {log.retryCount > 0 ? `${log.retryCount}回` : '―'}
+                              {log.retry_count > 0 ? `${log.retry_count}回` : '―'}
                             </td>
                             <td className="py-4 px-6">
                               <div className="flex items-center justify-center space-x-2">

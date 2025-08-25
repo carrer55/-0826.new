@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, CheckCircle, XCircle, AlertTriangle, RefreshCw, ExternalLink, Key, Shield } from 'lucide-react';
+import { useAccountingIntegration } from '../hooks/useAccountingIntegration';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
@@ -18,32 +19,7 @@ interface ConnectionStatus {
 
 function AccountingIntegration({ onNavigate }: AccountingIntegrationProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [connections, setConnections] = useState<ConnectionStatus[]>([
-    {
-      service: 'freee',
-      connected: true,
-      lastSync: '2024-07-20T15:30:00Z',
-      status: 'active',
-      apiVersion: 'v1.0',
-      permissions: ['会計帳簿', '取引先', '品目']
-    },
-    {
-      service: 'MoneyForward',
-      connected: false,
-      lastSync: '',
-      status: 'disconnected',
-      apiVersion: 'v2.0',
-      permissions: []
-    },
-    {
-      service: '弥生会計',
-      connected: true,
-      lastSync: '2024-07-19T10:15:00Z',
-      status: 'error',
-      apiVersion: 'v1.2',
-      permissions: ['仕訳', '科目']
-    }
-  ]);
+  const { services, loading, error, connectService, disconnectService, refreshSettings } = useAccountingIntegration();
 
   const [showOAuthModal, setShowOAuthModal] = useState(false);
   const [selectedService, setSelectedService] = useState('');
@@ -99,29 +75,32 @@ function AccountingIntegration({ onNavigate }: AccountingIntegrationProps) {
 
   const handleDisconnect = (service: string) => {
     if (confirm(`${service}との接続を解除してもよろしいですか？`)) {
-      setConnections(prev => prev.map(conn => 
-        conn.service === service 
-          ? { ...conn, connected: false, status: 'disconnected', lastSync: '', permissions: [] }
-          : conn
-      ));
-      alert(`${service}との接続を解除しました`);
+      disconnectService(service as 'freee' | 'moneyforward' | 'yayoi').then(result => {
+        if (result.success) {
+          alert(`${service}との接続を解除しました`);
+        } else {
+          alert('接続解除に失敗しました: ' + result.error);
+        }
+      });
     }
   };
 
   const handleOAuthComplete = () => {
-    setConnections(prev => prev.map(conn => 
-      conn.service === selectedService 
-        ? { 
-            ...conn, 
-            connected: true, 
-            status: 'active', 
-            lastSync: new Date().toISOString(),
-            permissions: ['会計帳簿', '取引先', '品目']
-          }
-        : conn
-    ));
-    setShowOAuthModal(false);
-    alert(`${selectedService}との接続が完了しました`);
+    // 実際の実装では、OAuth認証後に取得したトークンを使用
+    const mockCredentials = {
+      accessToken: 'mock_access_token',
+      refreshToken: 'mock_refresh_token',
+      companyId: 'mock_company_id'
+    };
+    
+    connectService(selectedService as 'freee' | 'moneyforward' | 'yayoi', mockCredentials).then(result => {
+      if (result.success) {
+        setShowOAuthModal(false);
+        alert(`${selectedService}との接続が完了しました`);
+      } else {
+        alert('接続に失敗しました: ' + result.error);
+      }
+    });
   };
 
   const handleTestConnection = (service: string) => {
@@ -132,11 +111,7 @@ function AccountingIntegration({ onNavigate }: AccountingIntegrationProps) {
   };
 
   const handleSync = (service: string) => {
-    setConnections(prev => prev.map(conn => 
-      conn.service === service 
-        ? { ...conn, lastSync: new Date().toISOString() }
-        : conn
-    ));
+    refreshSettings();
     alert(`${service}との同期を開始しました`);
   };
 
@@ -195,13 +170,17 @@ function AccountingIntegration({ onNavigate }: AccountingIntegrationProps) {
                   <h2 className="text-xl font-semibold text-slate-800">対応会計ソフト</h2>
                 </div>
                 <div className="divide-y divide-white/20">
-                  {connections.map((connection) => (
+                  {services.map((connection) => (
                     <div key={connection.service} className="p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4">
-                          <div className="text-3xl">{getServiceLogo(connection.service)}</div>
+                          <div className="text-3xl">{getServiceLogo(connection.service === 'moneyforward' ? 'MoneyForward' : connection.service === 'yayoi' ? '弥生会計' : connection.service)}</div>
                           <div>
-                            <h3 className="text-lg font-semibold text-slate-800">{connection.service}</h3>
+                            <h3 className="text-lg font-semibold text-slate-800">
+                              {connection.service === 'moneyforward' ? 'MoneyForward' : 
+                               connection.service === 'yayoi' ? '弥生会計' : 
+                               connection.service}
+                            </h3>
                             <p className="text-sm text-slate-600">API Version: {connection.apiVersion}</p>
                           </div>
                         </div>

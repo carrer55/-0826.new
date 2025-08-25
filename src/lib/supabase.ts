@@ -759,6 +759,13 @@ export const getCurrentUserProfile = async () => {
   const user = await getCurrentUser();
   if (!user) return null;
 
+  // デモモードの場合はローカルストレージから取得
+  if (localStorage.getItem('demoMode') === 'true') {
+    const demoProfile = localStorage.getItem('userProfile');
+    if (demoProfile) {
+      return JSON.parse(demoProfile);
+    }
+  }
   const { data: profile, error } = await supabase
     .from('user_profiles')
     .select('*')

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Eye, Edit, Trash2, Clock, CheckCircle, XCircle, AlertTriangle, Plus } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
+import { useExpenseCategories } from '../hooks/useExpenseCategories';
 
 interface ApplicationListProps {
   onCreateNew: (type: 'business_trip' | 'expense') => void;
@@ -8,10 +9,12 @@ interface ApplicationListProps {
 }
 
 function ApplicationList({ onCreateNew, onViewDetail }: ApplicationListProps) {
-  const { applications, loading, error, deleteApplication } = useApplications();
+  const { applications, loading, error, deleteApplication, getApplicationDetail } = useApplications();
+  const { categories } = useExpenseCategories();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -73,6 +76,15 @@ function ApplicationList({ onCreateNew, onViewDetail }: ApplicationListProps) {
     }
   };
 
+  const handleViewDetail = async (applicationId: string) => {
+    const result = await getApplicationDetail(applicationId);
+    if (result.success) {
+      setSelectedApplication(result.application);
+      onViewDetail(applicationId);
+    } else {
+      alert('詳細の取得に失敗しました: ' + result.error);
+    }
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -197,7 +209,7 @@ function ApplicationList({ onCreateNew, onViewDetail }: ApplicationListProps) {
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => onViewDetail(app.id)}
+                          onClick={() => handleViewDetail(app.id)}
                           className="p-2 text-slate-600 hover:text-slate-800 hover:bg-white/30 rounded-lg transition-colors"
                           title="詳細表示"
                         >
