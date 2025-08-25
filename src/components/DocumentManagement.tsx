@@ -105,6 +105,13 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
         status: 'draft',
         createdAt: '2024-08-01T11:00:00Z',
         updatedAt: '2024-08-01T11:00:00Z',
+        size: '6.8MB',
+        thumbnail: '📈',
+        description: '2024年度の年次集計レポート'
+      }
+    ];
+  }, []);
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -290,7 +297,7 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
                     <p className="text-red-700">エラー: {error}</p>
                   </div>
                 ) : (
-                {filteredDocuments.map((document) => (
+                filteredDocuments.map((document) => (
                   <div key={document.id} className="backdrop-blur-xl bg-white/10 rounded-lg border border-white/20 shadow-lg hover:shadow-xl hover:bg-white/15 transition-all duration-300 overflow-hidden">
                     {/* サムネイル */}
                     <div className="h-24 bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center border-b border-white/10">
@@ -345,7 +352,7 @@ function DocumentManagement({ onNavigate }: DocumentManagementProps) {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))
                 )}
               </div>
 
