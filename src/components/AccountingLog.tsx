@@ -72,7 +72,8 @@ function AccountingLog({ onNavigate }: AccountingLogProps) {
       status: 'success',
       sentAt: '2024-07-19T11:20:00Z',
       retryCount: 0
-    },
+    }
+  ]);
   const services = ['freee', 'moneyforward', 'yayoi'];
 
   const toggleSidebar = () => {
