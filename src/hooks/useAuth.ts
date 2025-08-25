@@ -21,6 +21,7 @@ export function useAuth() {
     let mounted = true;
 
     const getInitialSession = async () => {
+      console.log('useAuth: getInitialSession started');
       try {
         // デモモードのチェック
         const demoMode = localStorage.getItem('demoMode');
@@ -28,6 +29,7 @@ export function useAuth() {
         
         if (demoMode === 'true' && demoSession) {
           try {
+            console.log('useAuth: Demo mode detected, loading from localStorage');
             const session = JSON.parse(demoSession);
             const demoProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
             
@@ -38,9 +40,11 @@ export function useAuth() {
                 loading: false,
                 error: null
               });
+            console.log('useAuth: Demo mode loaded, loading set to false');
             }
             return;
           } catch (error) {
+            console.error('useAuth: Demo session parse error:', error);
             console.error('Demo session parse error:', error);
             localStorage.removeItem('demoMode');
             localStorage.removeItem('demoSession');
@@ -53,6 +57,7 @@ export function useAuth() {
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         
         if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('demo')) {
+          console.warn('useAuth: Supabase not configured or using demo URL, falling back to unauthenticated state.');
           console.warn('Supabase not configured, using demo mode');
           if (mounted) {
             setAuthState({
@@ -61,13 +66,16 @@ export function useAuth() {
               loading: false,
               error: null
             });
+            console.log('useAuth: Supabase not configured, loading set to false');
           }
           return;
         }
 
+        console.log('useAuth: Attempting to get Supabase session...');
         // 通常の認証チェック
         try {
           const { data: { session }, error } = await supabase.auth.getSession();
+          console.log('useAuth: getSession() completed. Session:', session, 'Error:', error);
           
           if (error) {
             console.warn('Supabase auth error, falling back to demo mode:', error);
@@ -78,13 +86,16 @@ export function useAuth() {
                 loading: false,
                 error: null
               });
+            console.log('useAuth: Supabase auth error, loading set to false');
             }
             return;
           }
 
           if (session?.user) {
+            console.log('useAuth: Session user found, fetching profile...');
             try {
               const profile = await getCurrentUserProfile();
+              console.log('useAuth: Profile fetched:', profile);
               if (mounted) {
                 setAuthState({
                   user: session.user,
@@ -92,9 +103,11 @@ export function useAuth() {
                   loading: false,
                   error: null
                 });
+                console.log('useAuth: Auth state updated with user and profile, loading set to false');
               }
             } catch (profileError) {
               console.warn('Profile fetch error:', profileError);
+              console.warn('useAuth: Profile fetch error during getInitialSession:', profileError);
               if (mounted) {
                 setAuthState({
                   user: session.user,
@@ -102,19 +115,23 @@ export function useAuth() {
                   loading: false,
                   error: null
                 });
+                console.log('useAuth: Auth state updated with user (no profile), loading set to false');
               }
             }
           } else {
+            console.log('useAuth: No session user found.');
             if (mounted) {
               setAuthState({
                 user: null,
                 profile: null,
                 loading: false,
                 error: null
+              console.log('useAuth: Auth state updated to unauthenticated, loading set to false');
               });
             }
           }
         } catch (supabaseError) {
+          console.warn('useAuth: Supabase connection or API call failed in inner try-catch:', supabaseError);
           console.warn('Supabase connection failed, using offline mode:', supabaseError);
           if (mounted) {
             setAuthState({
@@ -123,10 +140,12 @@ export function useAuth() {
               loading: false,
               error: null
             });
+            console.log('useAuth: Supabase API call failed, loading set to false');
           }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        console.error('useAuth: Auth initialization error in outer try-catch:', error);
         if (mounted) {
           setAuthState({
             user: null,
@@ -134,6 +153,7 @@ export function useAuth() {
             loading: false,
             error: null
           });
+          console.log('useAuth: General initialization error, loading set to false');
         }
       }
     };
@@ -141,6 +161,7 @@ export function useAuth() {
     getInitialSession();
 
     // Supabase接続チェック
+    console.log('useAuth: Setting up Supabase auth state change listener...');
     const checkSupabaseConnection = async () => {
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -150,6 +171,7 @@ export function useAuth() {
         
         // 認証状態の変更を監視
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           async (event, session) => {
             console.log('Auth state change:', event, session?.user?.id);
             
@@ -199,6 +221,7 @@ export function useAuth() {
         return () => {
           subscription.unsubscribe();
         };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error) {
         console.warn('Supabase auth subscription failed:', error);
         return () => {}; // 空の cleanup 関数を返す
