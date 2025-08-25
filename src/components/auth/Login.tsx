@@ -18,46 +18,11 @@ function Login({ onNavigate, onLoginSuccess }: LoginProps) {
 
     // デモアカウントの処理
     if (email === 'demo' && password === 'pass9981') {
-      try {
-        // デモユーザーのプロフィール情報をローカルストレージに設定
-        const demoProfile = {
-          id: 'demo-user-id',
-          email: 'demo',
-          full_name: 'デモユーザー',
-          company_name: '株式会社デモ',
-          position: '代表取締役',
-          phone: '090-0000-0000',
-          department: '経営企画部',
-          role: 'admin',
-          default_organization_id: null,
-          avatar_url: null,
-          onboarding_completed: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        localStorage.setItem('userProfile', JSON.stringify(demoProfile));
-        localStorage.setItem('demoMode', 'true');
-        
-        // 認証状態をシミュレート
-        const demoSession = {
-          user: {
-            id: 'demo-user-id',
-            email: 'demo',
-            email_confirmed_at: new Date().toISOString()
-          }
-        };
-        
-        localStorage.setItem('demoSession', JSON.stringify(demoSession));
-        
-        // ログイン成功
+      const result = await signIn(email, password);
+      if (result.success) {
         onLoginSuccess();
-        window.location.reload(); // デモモードの場合はリロードして状態を更新
-        return;
-      } catch (err) {
-        console.error('Demo login error:', err);
-        return;
       }
+      return;
     }
 
     // 通常のログイン処理

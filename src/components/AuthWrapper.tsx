@@ -43,6 +43,11 @@ function AuthWrapper() {
   useEffect(() => {
     if (loading) return;
 
+    // デモモードの場合は直接ダッシュボードを表示
+    if (localStorage.getItem('demoMode') === 'true') {
+      return;
+    }
+
     if (isAuthenticated && user) {
       if (!isEmailConfirmed) {
         setCurrentView('login');
@@ -72,18 +77,19 @@ function AuthWrapper() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center animate-pulse">
+        <div className="backdrop-blur-xl bg-white/20 rounded-xl p-8 border border-white/30 shadow-xl text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <p className="text-slate-600">読み込み中...</p>
-          <p className="text-slate-500 text-xs mt-2">システムを初期化しています</p>
+          <p className="text-slate-800 font-medium mb-2">システムを初期化中...</p>
+          <p className="text-slate-600 text-sm">しばらくお待ちください</p>
         </div>
       </div>
     );
   }
 
-  if (isAuthenticated) {
+  // 認証済みまたはデモモードの場合はダッシュボードを表示
+  if (isAuthenticated || localStorage.getItem('demoMode') === 'true') {
     return <Dashboard />;
   }
 

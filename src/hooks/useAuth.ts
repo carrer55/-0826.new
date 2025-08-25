@@ -48,13 +48,29 @@ export function useAuth() {
           }
         }
 
-        // 通常の認証チェック（エラーハンドリング強化）
+        // 環境変数チェック
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('demo')) {
+          console.warn('Supabase not configured, using demo mode');
+          if (mounted) {
+            setAuthState({
+              user: null,
+              profile: null,
+              loading: false,
+              error: null
+            });
+          }
+          return;
+        }
+
+        // 通常の認証チェック
         try {
           const { data: { session }, error } = await supabase.auth.getSession();
           
           if (error) {
-            console.warn('Supabase auth error:', error);
-            // Supabase接続エラーの場合はデモモードにフォールバック
+            console.warn('Supabase auth error, falling back to demo mode:', error);
             if (mounted) {
               setAuthState({
                 user: null,
@@ -67,15 +83,26 @@ export function useAuth() {
           }
 
           if (session?.user) {
-            const profile = await getCurrentUserProfile();
-            
-            if (mounted) {
-              setAuthState({
-                user: session.user,
-                profile,
-                loading: false,
-                error: null
-              });
+            try {
+              const profile = await getCurrentUserProfile();
+              if (mounted) {
+                setAuthState({
+                  user: session.user,
+                  profile,
+                  loading: false,
+                  error: null
+                });
+              }
+            } catch (profileError) {
+              console.warn('Profile fetch error:', profileError);
+              if (mounted) {
+                setAuthState({
+                  user: session.user,
+                  profile: null,
+                  loading: false,
+                  error: null
+                });
+              }
             }
           } else {
             if (mounted) {
@@ -112,6 +139,179 @@ export function useAuth() {
     };
 
     getInitialSession();
+
+    // Supabase接続チェック
+    const checkSupabaseConnection = async () => {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl || supabaseUrl.includes('demo')) {
+          return; // Supabase未設定の場合はスキップ
+        }
+        
+        // 認証状態の変更を監視
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state change:', event, session?.user?.id);
+            
+            if (!mounted) return;
+
+            if (event === 'SIGNED_IN' && session?.user) {
+              try {
+                const profile = await getCurrentUserProfile();
+                setAuthState({
+                  user: session.user,
+                  profile,
+                  loading: false,
+                  error: null
+                });
+              } catch (error) {
+                console.warn('Profile fetch error during sign in:', error);
+                setAuthState({
+                  user: session.user,
+                  profile: null,
+                  loading: false,
+                  error: null
+                });
+              }
+            } else if (event === 'SIGNED_OUT') {
+              setAuthState({
+                user: null,
+                profile: null,
+                loading: false,
+                error: null
+              });
+            } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+              try {
+                const profile = await getCurrentUserProfile();
+                setAuthState(prev => ({
+                  ...prev,
+                  user: session.user,
+                  profile,
+                  error: null
+                }));
+              } catch (error) {
+                console.warn('Profile fetch error during token refresh:', error);
+              }
+            }
+          }
+        );
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.warn('Supabase auth subscription failed:', error);
+        return () => {}; // 空の cleanup 関数を返す
+      }
+    };
+
+    const cleanup = checkSupabaseConnection();
+
+    return () => {
+      mounted = false;
+      if (cleanup) {
+        cleanup.then(fn => fn && fn());
+      }
+    };
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+
+      // デモアカウントの処理
+      if (email === 'demo' && password === 'pass9981') {
+        try {
+          const demoProfile = {
+            id: 'demo-user-id',
+            email: 'demo',
+            full_name: 'デモユーザー',
+            company_name: '株式会社デモ',
+            position: '代表取締役',
+            phone: '090-0000-0000',
+            department: '経営企画部',
+            role: 'admin',
+            default_organization_id: null,
+            avatar_url: null,
+            onboarding_completed: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          localStorage.setItem('userProfile', JSON.stringify(demoProfile));
+          localStorage.setItem('demoMode', 'true');
+          
+          const demoSession = {
+            user: {
+              id: 'demo-user-id',
+              email: 'demo',
+              email_confirmed_at: new Date().toISOString()
+            }
+          };
+          
+          localStorage.setItem('demoSession', JSON.stringify(demoSession));
+          
+          setAuthState({
+            user: demoSession.user as any,
+            profile: demoProfile,
+            loading: false,
+            error: null
+          });
+          
+          return { success: true, user: demoSession.user, profile: demoProfile };
+        } catch (err) {
+          console.error('Demo login error:', err);
+          setAuthState(prev => ({ ...prev, loading: false, error: 'デモログインに失敗しました' }));
+          return { success: false, error: 'デモログインに失敗しました' };
+        }
+      }
+
+      // 環境変数チェック
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl || supabaseUrl.includes('demo')) {
+        setAuthState(prev => ({ ...prev, loading: false, error: 'Supabaseが設定されていません' }));
+        return { success: false, error: 'Supabaseが設定されていません' };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setAuthState(prev => ({ ...prev, loading: false, error: error.message }));
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        try {
+          const profile = await getCurrentUserProfile();
+          setAuthState({
+            user: data.user,
+            profile,
+            loading: false,
+            error: null
+          });
+          return { success: true, user: data.user, profile };
+        } catch (profileError) {
+          console.warn('Profile fetch error:', profileError);
+          setAuthState({
+            user: data.user,
+            profile: null,
+            loading: false,
+            error: null
+          });
+          return { success: true, user: data.user, profile: null };
+          }
+      }
+
+      return { success: false, error: 'Unknown error occurred' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Sign in failed';
+      setAuthState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      return { success: false, error: errorMessage };
+    }
+  };
 
     // 認証状態の変更を監視
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

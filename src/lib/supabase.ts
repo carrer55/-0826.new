@@ -3,12 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// デモモード用のフォールバック設定
-const defaultUrl = 'https://demo.supabase.co'
-const defaultKey = 'demo-anon-key'
-
-const finalUrl = supabaseUrl || defaultUrl
-const finalKey = supabaseAnonKey || defaultKey
+// 環境変数が設定されていない場合のデフォルト値
+const finalUrl = supabaseUrl || 'https://demo.supabase.co'
+const finalKey = supabaseAnonKey || 'demo-anon-key'
 
 export const supabase = createClient(finalUrl, finalKey, {
   auth: {
@@ -21,12 +18,22 @@ export const supabase = createClient(finalUrl, finalKey, {
   }
 })
 
+// Supabase接続状態をチェック
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('demo'))
+}
+
 // Edge Functions のヘルパー関数
 export const callEdgeFunction = async (
   functionName: string, 
   payload: any, 
   options: { method?: string } = {}
 ) => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured, skipping edge function call')
+    return { error: 'Supabase not configured' }
+  }
+
   const { data: { session } } = await supabase.auth.getSession()
   
   const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
@@ -770,6 +777,25 @@ export const getCurrentUserProfile = async () => {
     }
   }
   
+  // Supabase未設定の場合はデフォルトプロフィールを返す
+  if (!isSupabaseConfigured()) {
+    return {
+      id: user.id,
+      email: user.email || '',
+      full_name: 'ユーザー',
+      company_name: '',
+      position: 'user',
+      phone: '',
+      department: '',
+      role: 'user',
+      default_organization_id: null,
+      avatar_url: null,
+      onboarding_completed: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
   try {
     const { data: profile, error } = await supabase
       .from('user_profiles')
@@ -779,7 +805,6 @@ export const getCurrentUserProfile = async () => {
 
     if (error) {
       console.warn('Profile fetch error:', error);
-      // エラーの場合はデフォルトプロフィールを返す
       return {
         id: user.id,
         email: user.email || '',
@@ -791,7 +816,7 @@ export const getCurrentUserProfile = async () => {
         role: 'user',
         default_organization_id: null,
         avatar_url: null,
-        onboarding_completed: false,
+        onboarding_completed: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -811,7 +836,7 @@ export const getCurrentUserProfile = async () => {
       role: 'user',
       default_organization_id: null,
       avatar_url: null,
-      onboarding_completed: false,
+      onboarding_completed: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

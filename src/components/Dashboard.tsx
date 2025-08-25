@@ -40,6 +40,30 @@ function Dashboard() {
   const [applicationDetail, setApplicationDetail] = useState<{type: 'business-trip' | 'expense', id: string} | null>(null);
   const [documentType, setDocumentType] = useState<string>('');
   const [documentId, setDocumentId] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    // 初期化完了をマーク
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="backdrop-blur-xl bg-white/20 rounded-xl p-8 border border-white/30 shadow-xl text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-navy-600 to-navy-800 flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-slate-800 font-medium mb-2">ダッシュボードを準備中...</p>
+          <p className="text-slate-600 text-sm">しばらくお待ちください</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
