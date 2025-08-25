@@ -126,8 +126,8 @@ export function useAuth() {
                 profile: null,
                 loading: false,
                 error: null
-              console.log('useAuth: Auth state updated to unauthenticated, loading set to false');
               });
+              console.log('useAuth: Auth state updated to unauthenticated, loading set to false');
             }
           }
         } catch (supabaseError) {
